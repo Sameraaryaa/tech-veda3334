@@ -35,7 +35,8 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
     setStep("success");
   };
 
-  const handleCopy = () => { navigator.clipboard.writeText(charger.ownerPhone); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const ownerPhone = charger.ownerPhone || (charger as any).phoneNumber || "+919876543210";
+  const handleCopy = () => { navigator.clipboard.writeText(ownerPhone); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   if (!isOpen) return null;
 
@@ -70,14 +71,14 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
             <div className="glass rounded-xl p-4 mb-4">
               <p className="text-text-secondary text-xs mb-2">Contact Owner</p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2"><Phone size={14} className="text-ev-primary" /><span className="font-mono text-sm">{charger.ownerPhone}</span></div>
+                <div className="flex items-center gap-2"><Phone size={14} className="text-ev-primary" /><span className="font-mono text-sm">{ownerPhone}</span></div>
                 <button className="p-2 rounded-lg" style={{ background: "var(--bg-border)" }} onClick={handleCopy}>
                   {copied ? <Check size={14} className="text-ev-primary" /> : <Copy size={14} className="text-text-secondary" />}
                 </button>
               </div>
             </div>
 
-            <a href={`https://wa.me/${charger.ownerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I've booked your EV charger on EVConnect. Arriving soon!`)}`} target="_blank" rel="noopener noreferrer" className="btn-primary w-full py-3 flex items-center justify-center gap-2 no-underline" style={{ background: "#25D366" }}>
+            <a href={`https://wa.me/${ownerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, I've booked your EV charger on EVConnect. Arriving soon!`)}`} target="_blank" rel="noopener noreferrer" className="btn-primary w-full py-3 flex items-center justify-center gap-2 no-underline" style={{ background: "#25D366" }}>
               <MessageCircle size={18} /> Open WhatsApp
             </a>
           </div>
@@ -158,7 +159,7 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
                 ))}
               </div>
               {scheduleMode === "schedule" && <input type="time" className="input-glass text-sm" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />}
-              <p className="text-text-secondary text-[10px] mt-1">Available {charger.availableFrom} – {charger.availableTo}</p>
+              <p className="text-text-secondary text-[10px] mt-1">Available {charger.availableFrom || (charger as any).availableHours || "6:00 AM"} {charger.availableTo ? `– ${charger.availableTo}` : ""}</p>
             </div>
 
             {/* Confirm */}
