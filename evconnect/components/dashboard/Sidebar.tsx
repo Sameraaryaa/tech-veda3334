@@ -83,9 +83,16 @@ export default function Sidebar({ role }: SidebarProps) {
 
       {/* Bottom */}
       <div className="p-4 border-t space-y-2" style={{ borderColor: "rgba(26,47,74,0.5)" }}>
-        <Link href={role === "owner" ? "/user-dashboard" : "/owner-dashboard"} className="no-underline">
+        {role === "owner" && (
+          <Link href="/admin" className="no-underline">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-text-secondary hover:text-ev-primary transition-colors cursor-pointer">
+              🛡️ Admin Panel
+            </div>
+          </Link>
+        )}
+        <Link href="/user-dashboard/my-chargers" className="no-underline">
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-text-secondary hover:text-ev-primary transition-colors cursor-pointer">
-            {role === "owner" ? "🚗 Switch to Driver" : "⚡ Switch to Owner"}
+            ⚡ List a Charger
           </div>
         </Link>
         <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-text-secondary hover:text-ev-danger transition-colors cursor-pointer w-full">
