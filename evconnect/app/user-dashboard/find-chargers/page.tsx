@@ -9,7 +9,7 @@ import BookingModal from "@/components/charger/BookingModal";
 import { useAuthContext } from "@/lib/context/AuthContext";
 import { listenToAllChargers } from "@/lib/firebase";
 import { Charger } from "@/lib/types";
-import { MapPin, Zap, Filter } from "lucide-react";
+import { MapPin, Zap, Filter, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
@@ -21,6 +21,7 @@ export default function UserFindChargersPage() {
   const { user, loading } = useAuthContext();
   const [chargers, setChargers] = useState<Charger[]>([]);
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [bookingCharger, setBookingCharger] = useState<Charger | null>(null);
 
   useEffect(() => { if (!loading && !user) router.push("/auth"); }, [user, loading, router]);
@@ -32,7 +33,11 @@ export default function UserFindChargersPage() {
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><Zap size={32} className="text-ev-primary animate-pulse" /></div>;
 
   const filters = ["All", "Type 2", "CCS2", "CHAdeMO", "15A Socket"];
-  const filtered = filter === "All" ? chargers : chargers.filter(c => c.connectorType === filter);
+  const byType = filter === "All" ? chargers : chargers.filter(c => c.connectorType === filter);
+  const filtered = search.trim() ? byType.filter(c => {
+    const q = search.toLowerCase();
+    return c.location.address.toLowerCase().includes(q) || c.location.city.toLowerCase().includes(q) || c.ownerName.toLowerCase().includes(q);
+  }) : byType;
   const available = filtered.filter(c => c.status === "available");
 
   return (
@@ -43,6 +48,11 @@ export default function UserFindChargersPage() {
         <main className="flex-1 flex overflow-hidden">
           {/* Left Panel — Charger list */}
           <div className="w-[340px] min-w-[340px] border-r flex flex-col overflow-hidden" style={{ borderColor: "rgba(26,47,74,0.5)" }}>
+            {/* Search */}
+            <div className="p-3 border-b" style={{ borderColor: "rgba(26,47,74,0.3)" }}>
+              <div className="relative"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" /><input className="input-glass !pl-9 !py-2 text-sm" placeholder="Search by area, city, owner..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+            </div>
+
             {/* Filters */}
             <div className="p-3 border-b flex gap-1.5 flex-wrap" style={{ borderColor: "rgba(26,47,74,0.3)" }}>
               <Filter size={14} className="text-text-secondary mt-1.5" />
