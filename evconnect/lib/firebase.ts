@@ -14,6 +14,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   Auth,
@@ -73,20 +76,103 @@ export function getFirebaseAuth(): Auth {
 
 const googleProvider = new GoogleAuthProvider();
 
-export async function signInWithGoogle(): Promise<User> {
-  const auth = getFirebaseAuth();
-  const result = await signInWithPopup(auth, googleProvider);
+/**
+ * Sign in with Google popup — writes user profile to DB on first login
+ */
+export async function signInWithGoogle(role: "owner" | "user" = "user"): Promise<User> {
+  const authInstance = getFirebaseAuth();
+  const result = await signInWithPopup(authInstance, googleProvider);
+  const user = result.user;
+  // Write/update user profile in Realtime DB
+  await writeUserProfile(user, role);
+  return user;
+}
+
+/**
+ * Sign in with email and password
+ */
+export async function signInWithEmail(email: string, password: string): Promise<User> {
+  const authInstance = getFirebaseAuth();
+  const result = await signInWithEmailAndPassword(authInstance, email, password);
   return result.user;
 }
 
+/**
+ * Sign up with email, password, name, and role
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  name: string,
+  role: "owner" | "user"
+): Promise<User> {
+  const authInstance = getFirebaseAuth();
+  const result = await createUserWithEmailAndPassword(authInstance, email, password);
+  const user = result.user;
+  // Set display name
+  await updateProfile(user, { displayName: name });
+  // Write user profile to DB
+  await writeUserProfile(user, role, name);
+  return user;
+}
+
+/**
+ * Write or update user profile in Firebase Realtime DB
+ */
+export async function writeUserProfile(
+  user: User,
+  role: "owner" | "user",
+  displayName?: string
+): Promise<void> {
+  const database = getFirebaseDB();
+  const userRef = ref(database, `users/${user.uid}`);
+  const snapshot = await get(userRef);
+  if (!snapshot.exists()) {
+    // First time — create profile
+    await set(userRef, {
+      uid: user.uid,
+      name: displayName || user.displayName || "User",
+      email: user.email,
+      role,
+      photoURL: user.photoURL || null,
+      nfcCardUID: null,
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    // Existing user — just update last login
+    await update(userRef, {
+      lastLoginAt: new Date().toISOString(),
+      photoURL: user.photoURL || snapshot.val().photoURL || null,
+    });
+  }
+}
+
+/**
+ * Get user profile from Realtime DB
+ */
+export async function getUserProfile(uid: string): Promise<{
+  uid: string;
+  name: string;
+  email: string;
+  role: "owner" | "user" | "both";
+  nfcCardUID: string | null;
+  photoURL: string | null;
+} | null> {
+  const database = getFirebaseDB();
+  const userRef = ref(database, `users/${uid}`);
+  const snapshot = await get(userRef);
+  if (!snapshot.exists()) return null;
+  return snapshot.val();
+}
+
 export async function signOutUser(): Promise<void> {
-  const auth = getFirebaseAuth();
-  await signOut(auth);
+  const authInstance = getFirebaseAuth();
+  await signOut(authInstance);
 }
 
 export function onAuthChange(callback: (user: User | null) => void): Unsubscribe {
-  const auth = getFirebaseAuth();
-  return onAuthStateChanged(auth, callback);
+  const authInstance = getFirebaseAuth();
+  return onAuthStateChanged(authInstance, callback);
 }
 
 /* ═══════════════════════════════════════════════════════════

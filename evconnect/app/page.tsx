@@ -6,29 +6,36 @@ import Navbar from "@/components/ui/Navbar";
 import NFCScanModal from "@/components/nfc/NFCScanModal";
 import { Zap, MapPin, CheckCircle, ChevronRight, Wifi, Play } from "lucide-react";
 
+// Deterministic particle positions to avoid SSR hydration mismatch
+const PARTICLES = [
+  { left: 5, size: 3, blue: false, speed: 12, delay: 2 },
+  { left: 12, size: 4, blue: true, speed: 15, delay: 5 },
+  { left: 20, size: 2, blue: false, speed: 10, delay: 1 },
+  { left: 28, size: 5, blue: false, speed: 18, delay: 7 },
+  { left: 35, size: 3, blue: true, speed: 11, delay: 3 },
+  { left: 42, size: 4, blue: false, speed: 14, delay: 9 },
+  { left: 48, size: 2, blue: false, speed: 16, delay: 0 },
+  { left: 55, size: 5, blue: true, speed: 9, delay: 6 },
+  { left: 62, size: 3, blue: false, speed: 13, delay: 4 },
+  { left: 68, size: 4, blue: false, speed: 17, delay: 8 },
+  { left: 75, size: 2, blue: true, speed: 10, delay: 1 },
+  { left: 82, size: 5, blue: false, speed: 15, delay: 5 },
+  { left: 88, size: 3, blue: false, speed: 12, delay: 3 },
+  { left: 93, size: 4, blue: true, speed: 19, delay: 7 },
+  { left: 97, size: 2, blue: false, speed: 11, delay: 9 },
+];
+
 function ParticleField() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {Array.from({ length: 30 }).map((_, i) => {
-        const size = 2 + Math.random() * 4;
-        const isBlue = Math.random() > 0.6;
-        return (
-          <div key={i} style={{
-            position: "absolute", bottom: "-10px", left: `${Math.random() * 100}%`,
-            width: `${size}px`, height: `${size}px`, borderRadius: "50%",
-            background: isBlue ? "#0EA5E9" : "#00FF88", opacity: 0,
-            animation: `fp ${8 + Math.random() * 12}s linear ${Math.random() * 10}s infinite`,
-          }} />
-        );
-      })}
-      <style jsx>{`
-        @keyframes fp {
-          0% { transform: translateY(0); opacity: 0; }
-          10% { opacity: 0.2; }
-          90% { opacity: 0.1; }
-          100% { transform: translateY(-100vh); opacity: 0; }
-        }
-      `}</style>
+      {PARTICLES.map((p, i) => (
+        <div key={i} style={{
+          position: "absolute", bottom: "-10px", left: `${p.left}%`,
+          width: `${p.size}px`, height: `${p.size}px`, borderRadius: "50%",
+          background: p.blue ? "#0EA5E9" : "#00FF88", opacity: 0,
+          animation: `float-particle ${p.speed}s linear ${p.delay}s infinite`,
+        }} />
+      ))}
     </div>
   );
 }

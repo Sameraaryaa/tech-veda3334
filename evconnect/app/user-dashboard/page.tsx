@@ -1,29 +1,60 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import NFCScanModal from "@/components/nfc/NFCScanModal";
+import { useAuthContext } from "@/lib/context/AuthContext";
+import { listenToAllChargers } from "@/lib/firebase";
+import { Charger } from "@/lib/types";
 import Link from "next/link";
 import { Zap, MapPin, Route, Smartphone, Battery, Leaf, Calendar, TrendingUp } from "lucide-react";
-import { MOCK_CHARGERS, EV_MODELS } from "@/lib/data/mockChargers";
+import { EV_MODELS } from "@/lib/data/mockChargers";
 
 export default function UserDashboard() {
+  const router = useRouter();
+  const { user, loading } = useAuthContext();
   const [nfcOpen, setNfcOpen] = useState(false);
+  const [nearbyChargers, setNearbyChargers] = useState<Charger[]>([]);
   const ev = EV_MODELS[0];
-  const nearbyChargers = MOCK_CHARGERS.filter(c => c.status === "available").slice(0, 3);
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!loading && !user) router.push("/auth");
+  }, [user, loading, router]);
+
+  // Listen to chargers from Firebase
+  useEffect(() => {
+    const unsub = listenToAllChargers((all) => {
+      setNearbyChargers(all.filter(c => c.status === "available").slice(0, 3));
+    });
+    return () => unsub();
+  }, []);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}>
+        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", animation: "pulse-glow 2s infinite" }}>
+          <Zap size={24} fill="#050A14" />
+        </div>
+      </div>
+    );
+  }
+
+  const userName = user.displayName;
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar role="user" userName="Arya" />
+      <Sidebar role="user" />
       <div className="flex-1 ml-[260px] flex flex-col">
-        <TopBar title="Dashboard" userName="Arya" />
+        <TopBar title="Dashboard" />
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
 
           {/* Greeting */}
           <div className="glass rounded-2xl p-8 flex items-center justify-between">
             <div>
-              <h2 className="font-display font-extrabold text-2xl text-white">Ready to charge, Arya? ⚡</h2>
+              <h2 className="font-display font-extrabold text-2xl text-white">Ready to charge, {userName}? ⚡</h2>
               <div className="flex items-center gap-3 mt-2">
                 <span className="pill pill-secondary text-xs">🚗 {ev.name}</span>
                 <span className="pill pill-primary text-xs">🔋 67%</span>
@@ -40,9 +71,9 @@ export default function UserDashboard() {
           {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { href: "/map", icon: MapPin, title: "Find Charger", desc: "Near me", color: "#00FF88" },
-              { href: "/journey", icon: Route, title: "Plan Journey", desc: "Route + battery", color: "#0EA5E9" },
-              { href: "/user-dashboard/bookings", icon: Calendar, title: "Active Booking", desc: "None active", color: "#F59E0B" },
+              { href: "/user-dashboard/find-chargers", icon: MapPin, title: "Find Charger", desc: "Near me", color: "#00FF88" },
+              { href: "/user-dashboard/journey", icon: Route, title: "Plan Journey", desc: "Route + battery", color: "#0EA5E9" },
+              { href: "/user-dashboard/bookings", icon: Calendar, title: "My Bookings", desc: "View history", color: "#F59E0B" },
               { href: "#", icon: Smartphone, title: "Tap NFC", desc: "Instant charge", color: "#8B5CF6", onClick: () => setNfcOpen(true) },
             ].map(a => (
               <Link key={a.title} href={a.href} className="no-underline" onClick={a.onClick ? (e) => { e.preventDefault(); a.onClick(); } : undefined}>
@@ -56,14 +87,16 @@ export default function UserDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Nearby Chargers */}
+            {/* Nearby Chargers from Firebase */}
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display font-bold text-white">Chargers Near You</h3>
-                <Link href="/map" className="text-ev-primary text-xs no-underline hover:underline">View All →</Link>
+                <Link href="/user-dashboard/find-chargers" className="text-ev-primary text-xs no-underline hover:underline">View All →</Link>
               </div>
               <div className="space-y-3">
-                {nearbyChargers.map(c => (
+                {nearbyChargers.length === 0 ? (
+                  <p className="text-text-secondary text-sm text-center py-4">Loading chargers...</p>
+                ) : nearbyChargers.map(c => (
                   <div key={c.id} className="glass rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-xs" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", color: "#050A14" }}>{c.ownerName.charAt(0)}</div>
@@ -78,7 +111,7 @@ export default function UserDashboard() {
                   </div>
                 ))}
               </div>
-              <p className="text-text-secondary text-[10px] mt-3 text-center">Based on your last location</p>
+              <p className="text-text-secondary text-[10px] mt-3 text-center">Live from Firebase</p>
             </div>
 
             {/* Recent Activity */}

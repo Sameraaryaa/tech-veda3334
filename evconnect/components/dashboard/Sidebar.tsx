@@ -2,12 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Zap, Home, Battery, Calendar, DollarSign, Smartphone, Settings, LogOut, Map, Route, Car } from "lucide-react";
+import { useAuthContext } from "@/lib/context/AuthContext";
 
 interface SidebarProps {
   role: "owner" | "user";
-  userName?: string;
 }
 
 const OWNER_NAV = [
@@ -20,16 +20,25 @@ const OWNER_NAV = [
 
 const USER_NAV = [
   { href: "/user-dashboard", icon: Home, label: "Overview" },
-  { href: "/map", icon: Map, label: "Find Chargers" },
-  { href: "/journey", icon: Route, label: "Journey Planner" },
+  { href: "/user-dashboard/find-chargers", icon: Map, label: "Find Chargers" },
+  { href: "/user-dashboard/journey", icon: Route, label: "Journey Planner" },
   { href: "/user-dashboard/bookings", icon: Calendar, label: "My Bookings" },
+  { href: "/user-dashboard/my-chargers", icon: Zap, label: "My Chargers" },
   { href: "/user-dashboard/nfc", icon: Smartphone, label: "My NFC Card" },
   { href: "/user-dashboard/vehicles", icon: Car, label: "My Vehicles" },
 ];
 
-export default function Sidebar({ role, userName = "User" }: SidebarProps) {
+export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthContext();
   const nav = role === "owner" ? OWNER_NAV : USER_NAV;
+  const userName = user?.displayName || "User";
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/auth");
+  };
 
   return (
     <aside className="w-[260px] min-w-[260px] h-screen fixed left-0 top-0 flex flex-col z-50 border-r" style={{ background: "rgba(5,10,20,0.9)", backdropFilter: "blur(24px)", borderColor: "rgba(0,255,136,0.1)" }}>
@@ -42,9 +51,13 @@ export default function Sidebar({ role, userName = "User" }: SidebarProps) {
           <span className="font-display font-extrabold text-lg text-white">EVConnect</span>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-sm" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", color: "#050A14" }}>
-            {userName.charAt(0).toUpperCase()}
-          </div>
+          {user?.photoURL ? (
+            <img src={user.photoURL} alt="" className="w-11 h-11 rounded-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-sm" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", color: "#050A14" }}>
+              {userName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
             <p className="text-text-primary font-medium text-sm">{userName}</p>
             <span className="pill pill-primary text-[9px]">{role === "owner" ? "Charger Owner" : "EV Driver"}</span>
@@ -75,11 +88,9 @@ export default function Sidebar({ role, userName = "User" }: SidebarProps) {
             {role === "owner" ? "🚗 Switch to Driver" : "⚡ Switch to Owner"}
           </div>
         </Link>
-        <Link href="/auth" className="no-underline">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-text-secondary hover:text-ev-danger transition-colors cursor-pointer">
-            <LogOut size={14} /> Sign Out
-          </div>
-        </Link>
+        <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs text-text-secondary hover:text-ev-danger transition-colors cursor-pointer w-full">
+          <LogOut size={14} /> Sign Out
+        </button>
       </div>
     </aside>
   );

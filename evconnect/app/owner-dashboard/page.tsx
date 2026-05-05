@@ -1,38 +1,70 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import NFCScanModal from "@/components/nfc/NFCScanModal";
-import { Zap, TrendingUp, Calendar, Users, Activity, Plus, ToggleLeft, ToggleRight } from "lucide-react";
-import { MOCK_CHARGERS } from "@/lib/data/mockChargers";
+import { useAuthContext } from "@/lib/context/AuthContext";
+import { listenToAllChargers } from "@/lib/firebase";
+import { Charger } from "@/lib/types";
+import { Zap, TrendingUp, Calendar, Activity, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 
 const ACTIVITY_FEED = [
-  { icon: "📅", text: "Ananya S. booked your Type 2 charger", time: "2 min ago", color: "#0EA5E9" },
-  { icon: "⚡", text: "Charging session started — Vikram M.", time: "15 min ago", color: "#00FF88" },
+  { icon: "📅", text: "New booking received", time: "2 min ago", color: "#0EA5E9" },
+  { icon: "⚡", text: "Charging session started", time: "15 min ago", color: "#00FF88" },
   { icon: "✓", text: "Session completed — ₹45 earned", time: "1 hr ago", color: "#00FF88" },
   { icon: "📱", text: "Charger activated via NFC", time: "2 hrs ago", color: "#F59E0B" },
-  { icon: "📅", text: "New booking from Ravi K.", time: "3 hrs ago", color: "#0EA5E9" },
+  { icon: "📅", text: "New booking from user", time: "3 hrs ago", color: "#0EA5E9" },
 ];
 
 const EARNINGS_7D = [120, 85, 200, 150, 310, 240, 340];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function OwnerDashboard() {
+  const router = useRouter();
+  const { user, loading } = useAuthContext();
   const [nfcOpen, setNfcOpen] = useState(false);
-  const ownerChargers = MOCK_CHARGERS.slice(0, 3);
+  const [chargers, setChargers] = useState<Charger[]>([]);
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!loading && !user) router.push("/auth");
+  }, [user, loading, router]);
+
+  // Listen to chargers from Firebase
+  useEffect(() => {
+    const unsub = listenToAllChargers((all) => {
+      setChargers(all.slice(0, 4));
+    });
+    return () => unsub();
+  }, []);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}>
+        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", animation: "pulse-glow 2s infinite" }}>
+          <Zap size={24} fill="#050A14" />
+        </div>
+      </div>
+    );
+  }
+
+  const userName = user.displayName;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar role="owner" userName="Arya" />
+      <Sidebar role="owner" />
       <div className="flex-1 ml-[260px] flex flex-col">
-        <TopBar title="Overview" activeCount={2} userName="Arya" />
+        <TopBar title="Overview" activeCount={chargers.filter(c => c.status === "available").length} />
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
 
           {/* Welcome Card */}
           <div className="glass rounded-2xl p-8 flex items-center justify-between">
             <div>
-              <h2 className="font-display font-extrabold text-2xl text-white">Good morning, Arya ☀️</h2>
+              <h2 className="font-display font-extrabold text-2xl text-white">{greeting}, {userName} ☀️</h2>
               <p className="text-text-secondary mt-1">Your chargers are earning while you sleep.</p>
             </div>
             <div className="text-right">
@@ -44,7 +76,7 @@ export default function OwnerDashboard() {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: Zap, value: "3", label: "Active Chargers", color: "#00FF88" },
+              { icon: Zap, value: String(chargers.length), label: "Total Chargers", color: "#00FF88" },
               { icon: Activity, value: "8", label: "Today's Sessions", color: "#0EA5E9" },
               { icon: Calendar, value: "2", label: "Pending Bookings", color: "#F59E0B" },
               { icon: TrendingUp, value: "₹2,450", label: "This Month", color: "#00FF88" },
@@ -101,18 +133,20 @@ export default function OwnerDashboard() {
           <div className="glass rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display font-bold text-white">Your Chargers</h3>
-              <button className="btn-ghost text-xs py-2 px-4 flex items-center gap-1" onClick={() => setNfcOpen(true)}>
-                <Plus size={14} /> Add Charger
+              <button className="btn-ghost text-xs py-2 px-4 flex items-center gap-1" onClick={() => router.push("/owner-dashboard/chargers")}>
+                <Plus size={14} /> Manage
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ownerChargers.map(c => (
+              {chargers.map(c => (
                 <ChargerStatusCard key={c.id} charger={c} />
               ))}
-              <button className="glass rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-ev-primary transition-all" style={{ borderStyle: "dashed" }}>
-                <Plus size={24} className="text-text-secondary" />
-                <span className="text-text-secondary text-sm">Add New Charger</span>
-              </button>
+              {chargers.length === 0 && (
+                <div className="glass rounded-xl p-6 text-center col-span-full">
+                  <p className="text-text-secondary text-sm">No chargers yet. Add your first charger!</p>
+                  <button className="btn-primary mt-3 text-sm py-2 px-6" onClick={() => router.push("/list-charger")}>List a Charger</button>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -122,7 +156,7 @@ export default function OwnerDashboard() {
   );
 }
 
-function ChargerStatusCard({ charger }: { charger: typeof MOCK_CHARGERS[0] }) {
+function ChargerStatusCard({ charger }: { charger: Charger }) {
   const [status, setStatus] = useState(charger.status);
   const isAvail = status === "available";
   const statusColors: Record<string, string> = { available: "#00FF88", charging: "#F59E0B", booked: "#EF4444", offline: "#4A5568" };
@@ -139,10 +173,6 @@ function ChargerStatusCard({ charger }: { charger: typeof MOCK_CHARGERS[0] }) {
         </span>
         <span className="text-text-secondary font-mono">{charger.powerKW} kW</span>
         <span className="text-ev-primary font-mono">₹{charger.pricePerUnit}</span>
-      </div>
-      <div className="mt-3 flex justify-between text-[10px] text-text-secondary">
-        <span>Sessions today: 3</span>
-        <span className="text-ev-primary">₹85 earned</span>
       </div>
     </div>
   );

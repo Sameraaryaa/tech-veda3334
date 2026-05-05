@@ -1,7 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
+import { useAuthContext } from "@/lib/context/AuthContext";
 import { Check, X, Zap, Clock, User } from "lucide-react";
 
 const BOOKINGS = [
@@ -12,15 +14,21 @@ const BOOKINGS = [
 ];
 
 export default function OwnerBookingsPage() {
+  const router = useRouter();
+  const { user, loading } = useAuthContext();
   const [tab, setTab] = useState<string>("pending");
+
+  useEffect(() => { if (!loading && !user) router.push("/auth"); }, [user, loading, router]);
+  if (loading || !user) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><div className="w-12 h-12 rounded-full" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", animation: "pulse-glow 2s infinite" }} /></div>;
+
   const tabs = ["pending", "active", "completed", "cancelled"];
   const filtered = BOOKINGS.filter(b => b.status === tab);
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar role="owner" userName="Arya" />
+      <Sidebar role="owner" />
       <div className="flex-1 ml-[260px] flex flex-col">
-        <TopBar title="Bookings" userName="Arya" />
+        <TopBar title="Bookings" />
         <main className="flex-1 p-6 overflow-y-auto">
           <div className="flex gap-2 mb-6">
             {tabs.map(t => (

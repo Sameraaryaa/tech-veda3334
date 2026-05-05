@@ -2,15 +2,17 @@
 
 import React, { useState } from "react";
 import { Bell, ChevronDown } from "lucide-react";
+import { useAuthContext } from "@/lib/context/AuthContext";
 
 interface TopBarProps {
   title: string;
   activeCount?: number;
-  userName?: string;
 }
 
-export default function TopBar({ title, activeCount = 0, userName = "User" }: TopBarProps) {
+export default function TopBar({ title, activeCount = 0 }: TopBarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
+  const { user } = useAuthContext();
+  const userName = user?.displayName || "User";
 
   return (
     <header className="h-16 flex items-center justify-between px-6 border-b sticky top-0 z-40" style={{ background: "rgba(5,10,20,0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(26,47,74,0.5)" }}>
@@ -41,7 +43,11 @@ export default function TopBar({ title, activeCount = 0, userName = "User" }: To
 
         {/* Avatar */}
         <div className="flex items-center gap-2 cursor-pointer">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", color: "#050A14" }}>{userName.charAt(0)}</div>
+          {user?.photoURL ? (
+            <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", color: "#050A14" }}>{userName.charAt(0)}</div>
+          )}
           <ChevronDown size={14} className="text-text-secondary" />
         </div>
       </div>

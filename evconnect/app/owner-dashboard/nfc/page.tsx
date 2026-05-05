@@ -1,24 +1,30 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
+import { useAuthContext } from "@/lib/context/AuthContext";
 import { Wifi, Check, Shield, Zap, Smartphone, QrCode, Copy } from "lucide-react";
 
 export default function OwnerNFCPage() {
+  const router = useRouter();
+  const { user, loading } = useAuthContext();
   const [registered, setRegistered] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => { if (!loading && !user) router.push("/auth"); }, [user, loading, router]);
+  if (loading || !user) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><div className="w-12 h-12 rounded-full" style={{ background: "linear-gradient(135deg, #00FF88, #00CC6A)", animation: "pulse-glow 2s infinite" }}><Zap size={24} className="m-3" fill="#050A14" /></div></div>;
 
   const handleRegister = () => { setScanning(true); setTimeout(() => { setScanning(false); setRegistered(true); }, 2000); };
   const handleCopy = () => { navigator.clipboard.writeText("https://evconnect.netlify.app/map?charger=charger_id_001"); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar role="owner" userName="Arya" />
+      <Sidebar role="owner" />
       <div className="flex-1 ml-[260px] flex flex-col">
-        <TopBar title="NFC Setup" userName="Arya" />
+        <TopBar title="NFC Setup" />
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* Hero */}
           <div className="glass rounded-2xl p-12 text-center mb-6">
             <div className="relative w-20 h-20 mx-auto mb-6">
               {[0, 1, 2].map(i => (
@@ -46,7 +52,6 @@ export default function OwnerNFCPage() {
 
           {registered && (
             <>
-              {/* How It Works */}
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-display font-bold text-white mb-4">How It Works</h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -64,7 +69,6 @@ export default function OwnerNFCPage() {
                 </div>
               </div>
 
-              {/* Test + Share */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="glass rounded-2xl p-6">
                   <h3 className="font-display font-bold text-white mb-3 flex items-center gap-2"><Shield size={18} className="text-ev-primary" /> Test NFC Tap</h3>
@@ -75,10 +79,10 @@ export default function OwnerNFCPage() {
                 </div>
                 <div className="glass rounded-2xl p-6">
                   <h3 className="font-display font-bold text-white mb-3 flex items-center gap-2"><QrCode size={18} className="text-ev-primary" /> Share Charger</h3>
-                  <p className="text-text-secondary text-sm mb-4">Share this QR/link with EV drivers near you.</p>
+                  <p className="text-text-secondary text-sm mb-4">Share this link with EV drivers near you.</p>
                   <div className="glass rounded-xl p-4 flex items-center justify-between mb-3">
                     <span className="text-text-secondary text-xs truncate flex-1 font-mono">evconnect.netlify.app/map?c=001</span>
-                    <button className="ml-2" onClick={handleCopy}>{copied ? <Check size={16} className="text-ev-primary" /> : <Copy size={16} className="text-text-secondary" />}</button>
+                    <button className="ml-2 cursor-pointer" onClick={handleCopy}>{copied ? <Check size={16} className="text-ev-primary" /> : <Copy size={16} className="text-text-secondary" />}</button>
                   </div>
                 </div>
               </div>
