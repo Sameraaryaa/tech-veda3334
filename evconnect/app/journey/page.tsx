@@ -41,7 +41,7 @@ export default function JourneyPage() {
       const weatherData = await getWeather(startCoords[1], startCoords[0]);
       setWeather(weatherData);
       setRouteDistance(routeData.distanceKm);
-      setRouteTime(Math.round(routeData.durationMin));
+      setRouteTime(Math.round(routeData.durationMinutes || routeData.distanceKm / 40 * 60));
       const battResult = predictBattery({ distanceKm: routeData.distanceKm, currentBatteryPercent: batteryPercent, fullRangeKm: selectedEV.fullRangeKm, temperatureCelsius: weatherData.temperature, isRaining: weatherData.isRaining, acOn });
       setResult(battResult);
       setRouteGeoJSON(routeData.geometry);
