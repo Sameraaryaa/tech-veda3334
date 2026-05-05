@@ -307,3 +307,15 @@ export async function getUserBookings(userId: string): Promise<Booking[]> {
   const allBookings = Object.values(data) as Booking[];
   return allBookings.filter((b) => b.userId === userId);
 }
+
+/**
+ * Cancel a booking and mark the charger as available again
+ */
+export async function cancelBooking(bookingId: string, chargerId: string): Promise<void> {
+  const database = getFirebaseDB();
+  const bookingRef = ref(database, `bookings/${bookingId}`);
+  await update(bookingRef, { status: "cancelled" });
+
+  // Also update charger status to "available"
+  await updateChargerStatus(chargerId, "available");
+}

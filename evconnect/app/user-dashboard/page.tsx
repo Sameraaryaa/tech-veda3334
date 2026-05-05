@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import NFCScanModal from "@/components/nfc/NFCScanModal";
+import EVAChat from "@/components/chat/EVAChat";
+import { MessageSquare } from "lucide-react";
 import { useAuthContext } from "@/lib/context/AuthContext";
 import { listenToAllChargers } from "@/lib/firebase";
 import { Charger } from "@/lib/types";
@@ -16,6 +18,7 @@ export default function UserDashboard() {
   const router = useRouter();
   const { user, loading } = useAuthContext();
   const [nfcOpen, setNfcOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [nearbyChargers, setNearbyChargers] = useState<Charger[]>([]);
   const ev = EV_MODELS[0];
 
@@ -154,6 +157,21 @@ export default function UserDashboard() {
         </main>
       </div>
       <NFCScanModal isOpen={nfcOpen} onClose={() => setNfcOpen(false)} onChargerDetected={() => setNfcOpen(false)} />
+
+      {/* Floating Chat Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center z-[200] transition-all hover:scale-110 active:scale-95"
+        style={{
+          background: "linear-gradient(135deg, #00FF88, #00CC6A)",
+          boxShadow: "0 8px 32px rgba(0,255,136,0.3)",
+          color: "#050A14"
+        }}
+      >
+        <MessageSquare size={24} />
+      </button>
+
+      <EVAChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

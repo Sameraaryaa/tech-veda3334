@@ -104,6 +104,8 @@ export default function ListChargerPage() {
   };
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><Zap size={32} className="text-ev-primary animate-pulse" /></div>;
+
+  return (
     <div className="min-h-screen flex flex-col">
       <Navbar activePath="/list-charger" />
       <div className="flex-1 max-w-[640px] mx-auto w-full px-4 py-8">

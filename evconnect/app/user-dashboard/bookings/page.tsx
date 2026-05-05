@@ -5,7 +5,7 @@ import TopBar from "@/components/dashboard/TopBar";
 import { Clock, MapPin, Navigation, X as XIcon, Zap } from "lucide-react";
 import Link from "next/link";
 import { useAuthContext } from "@/lib/context/AuthContext";
-import { getUserBookings, listenToAllChargers } from "@/lib/firebase";
+import { getUserBookings, listenToAllChargers, cancelBooking } from "@/lib/firebase";
 import { Booking, Charger } from "@/lib/types";
 
 export default function UserBookingsPage() {
@@ -36,6 +36,22 @@ export default function UserBookingsPage() {
       return () => unsub();
     }
   }, [user]);
+
+  const handleCancel = async (bookingId: string, chargerId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+
+    try {
+      await cancelBooking(bookingId, chargerId);
+      // Refresh bookings
+      if (user) {
+        const data = await getUserBookings(user.uid);
+        setBookings(data);
+      }
+    } catch (err) {
+      console.error("Failed to cancel booking:", err);
+      alert("Failed to cancel booking. Please try again.");
+    }
+  };
 
   const getChargerName = (id: string) => {
     const c = chargers.find(c => c.id === id);
@@ -84,6 +100,9 @@ export default function UserBookingsPage() {
                 {(b.status === "confirmed" || b.status === "active") && (
                   <div className="flex gap-2 mt-3">
                     <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(getChargerLoc(b.chargerId))}`} target="_blank" rel="noopener noreferrer" className="btn-ghost text-xs py-2 px-4 flex items-center gap-1 no-underline"><Navigation size={12} /> Get Directions</a>
+                    {b.status === "confirmed" && (
+                      <button onClick={() => b.id && handleCancel(b.id, b.chargerId)} className="pill cursor-pointer text-xs py-2 px-4" style={{ border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444" }}><XIcon size={12} className="inline mr-1" /> Cancel</button>
+                    )}
                   </div>
                 )}
                 {b.status === "confirmed" && (
