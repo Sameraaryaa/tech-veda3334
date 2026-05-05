@@ -18,13 +18,14 @@ export default function MyChargersPage() {
 
   useEffect(() => { if (!loading && !user) router.push("/auth"); }, [user, loading, router]);
   useEffect(() => {
-    const unsub = listenToAllChargers((all) => {
-      // In production, filter by user.uid === charger.ownerId
-      // For demo, show first 5 as "your" chargers
-      setChargers(all.slice(0, 5));
-    });
-    return () => unsub();
-  }, []);
+    if (user) {
+      const unsub = listenToAllChargers((all) => {
+        const myChargers = all.filter(c => c.ownerId === user.uid);
+        setChargers(myChargers);
+      });
+      return () => unsub();
+    }
+  }, [user]);
 
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><Zap size={32} className="text-ev-primary animate-pulse" /></div>;
 

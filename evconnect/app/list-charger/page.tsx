@@ -8,6 +8,9 @@ import { ArrowLeft, Zap, Clock, Check, ChevronRight, PartyPopper } from "lucide-
 import { ConnectorType } from "@/lib/types";
 import { getPricingBand, estimateMonthlyEarnings } from "@/lib/algorithms/pricing";
 import { CITY_STATE_MAP } from "@/lib/data/statePricing";
+import { useAuthContext } from "@/lib/context/AuthContext";
+import { addCharger } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 const CONNECTORS: { type: ConnectorType; icon: string; models: string; speed: string; speedColor: string; defaultKW: number }[] = [
   { type: "Type 2", icon: "🔌", models: "Nexon EV, Ather, Ola", speed: "Standard AC", speedColor: "#0EA5E9", defaultKW: 7.2 },
@@ -28,7 +31,11 @@ const AMENITIES = [
 const CITIES = ["Bangalore", "Mumbai", "Delhi", "Chennai", "Hyderabad", "Other"];
 
 export default function ListChargerPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuthContext();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [connector, setConnector] = useState<ConnectorType>("Type 2");
   const [powerKW, setPowerKW] = useState(7.2);
   const [availFrom, setAvailFrom] = useState("08:00");
@@ -49,7 +56,54 @@ export default function ListChargerPage() {
   const toggleAmenity = (id: string) => setAmenities(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
   const progressWidth = `${(step / 3) * 100}%`;
 
-  return (
+  const handlePublish = async () => {
+    if (!user) {
+      setError("Please sign in to list a charger.");
+      return;
+    }
+    if (!address.trim()) {
+      setError("Please enter an address.");
+      setStep(2);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await addCharger({
+        ownerId: user.uid,
+        ownerName: user.displayName || "Owner",
+        ownerPhone: "+91-0000000000", // Default or add a field for this
+        location: {
+          lat: 12.9716, // Default Bangalore lat
+          lng: 77.5946, // Default Bangalore lng
+          address,
+          city,
+          state,
+        },
+        connectorType: connector,
+        powerKW,
+        pricePerUnit,
+        currency: "INR",
+        status: isAvailable ? "available" : "offline",
+        availableFrom: availFrom,
+        availableTo: availTo,
+        rating: 5.0,
+        totalSessions: 0,
+        amenities,
+        images: [],
+        createdAt: Date.now(),
+      });
+      setIsPublished(true);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to list charger. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-primary)" }}><Zap size={32} className="text-ev-primary animate-pulse" /></div>;
     <div className="min-h-screen flex flex-col">
       <Navbar activePath="/list-charger" />
       <div className="flex-1 max-w-[640px] mx-auto w-full px-4 py-8">
@@ -192,8 +246,11 @@ export default function ListChargerPage() {
 
             <div className="flex gap-3">
               <button className="btn-ghost flex-1 py-3" onClick={() => setStep(2)}>Back</button>
-              <button className="btn-primary flex-1 py-4 text-base flex items-center justify-center gap-2" onClick={() => setIsPublished(true)}><Zap size={18} /> Publish My Charger ⚡</button>
+              <button className="btn-primary flex-1 py-4 text-base flex items-center justify-center gap-2" onClick={handlePublish} disabled={isSubmitting}>
+                {isSubmitting ? <><Zap size={18} className="animate-spin" /> Publishing...</> : <><Zap size={18} /> Publish My Charger ⚡</>}
+              </button>
             </div>
+            {error && <p className="text-ev-danger text-xs text-center">{error}</p>}
           </div>
         )}
 

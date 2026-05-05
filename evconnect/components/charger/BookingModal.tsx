@@ -4,7 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Charger } from "@/lib/types";
 import { calculateChargingCost, formatChargingTime } from "@/lib/algorithms/battery";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { Star, Zap, Copy, MessageCircle, Check, X, Phone } from "lucide-react";
+import { Star, Zap, Copy, MessageCircle, Check, X, Phone, Loader2 } from "lucide-react";
+import { useAuthContext } from "@/lib/context/AuthContext";
+import { createBooking } from "@/lib/firebase";
 
 interface BookingModalProps {
   charger: Charger;
@@ -19,7 +21,9 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
   const [targetPercent, setTargetPercent] = useState(80);
   const [scheduleMode, setScheduleMode] = useState<"now" | "schedule">("now");
   const [scheduleTime, setScheduleTime] = useState("14:00");
+  const { user } = useAuthContext();
   const [step, setStep] = useState<BookingStep>("details");
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const costResult = useMemo(() => {
@@ -30,9 +34,30 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
   }, [targetPercent, currentBatteryPercent, charger]);
 
   const handleConfirm = async () => {
+    if (!user) {
+      setError("Please sign in to book a charger.");
+      return;
+    }
     setStep("loading");
-    await new Promise(r => setTimeout(r, 1500));
-    setStep("success");
+    setError(null);
+    try {
+      await createBooking({
+        chargerId: charger.id,
+        userId: user.uid,
+        userName: user.displayName || "EV User",
+        startTime: Date.now(),
+        endTime: Date.now() + costResult.chargingTimeMinutes * 60000,
+        estimatedKwh: costResult.energyKwh,
+        estimatedCost: costResult.totalCost,
+        status: "confirmed",
+        paymentMethod: "UPI",
+      });
+      setStep("success");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to create booking. Please try again.");
+      setStep("details");
+    }
   };
 
   const ownerPhone = charger.ownerPhone || (charger as any).phoneNumber || "+919876543210";
@@ -90,7 +115,7 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
             <div className="w-full h-2 rounded-full overflow-hidden mb-6" style={{ background: "var(--bg-border)" }}>
               <div className="h-full rounded-full" style={{ background: "linear-gradient(90deg, #00FF88, #0EA5E9, #00FF88)", backgroundSize: "200% 100%", animation: "charging-pulse 1.5s infinite" }} />
             </div>
-            <p className="text-text-secondary text-sm">Processing...</p>
+            <p className="text-text-secondary text-sm">Securing your charger...</p>
           </div>
         )}
 
@@ -161,6 +186,8 @@ export default function BookingModal({ charger, isOpen, onClose, currentBatteryP
               {scheduleMode === "schedule" && <input type="time" className="input-glass text-sm" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />}
               <p className="text-text-secondary text-[10px] mt-1">Available {charger.availableFrom || (charger as any).availableHours || "6:00 AM"} {charger.availableTo ? `– ${charger.availableTo}` : ""}</p>
             </div>
+
+            {error && <p className="text-ev-danger text-xs text-center mb-4">{error}</p>}
 
             {/* Confirm */}
             <button className="btn-primary w-full py-4 text-base flex items-center justify-center gap-2" onClick={handleConfirm} disabled={charger.status !== "available"} id="confirm-booking-btn">
