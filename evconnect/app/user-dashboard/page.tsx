@@ -13,6 +13,8 @@ import { Charger } from "@/lib/types";
 import Link from "next/link";
 import { Zap, MapPin, Route, Smartphone, Battery, Leaf, Calendar, TrendingUp } from "lucide-react";
 import { EV_MODELS } from "@/lib/data/mockChargers";
+import { getWeather, getWeatherIcon } from "@/lib/weather";
+import { WeatherData } from "@/lib/types";
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function UserDashboard() {
   const [nfcOpen, setNfcOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [nearbyChargers, setNearbyChargers] = useState<Charger[]>([]);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const ev = EV_MODELS[0];
 
   // Redirect if not logged in
@@ -32,6 +35,10 @@ export default function UserDashboard() {
     const unsub = listenToAllChargers((all) => {
       setNearbyChargers(all.filter(c => c.status === "available").slice(0, 3));
     });
+    
+    // Fetch weather (Bangalore default)
+    getWeather(12.9716, 77.5946).then(setWeather);
+    
     return () => unsub();
   }, []);
 
@@ -63,11 +70,20 @@ export default function UserDashboard() {
                 <span className="pill pill-primary text-xs">🔋 67%</span>
               </div>
             </div>
-            <div className="w-24">
-              <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-border)" }}>
-                <div className="h-full rounded-full" style={{ width: "67%", background: "linear-gradient(90deg, #F59E0B, #00FF88)" }} />
+            <div className="flex items-center gap-6">
+              {weather && (
+                <div className="text-right hidden sm:block">
+                  <p className="text-2xl mb-1">{getWeatherIcon(weather.weatherCode)}</p>
+                  <p className="font-mono font-bold text-lg text-white">{weather.temperature}°C</p>
+                  <p className="text-text-secondary text-[10px]">{weather.description}</p>
+                </div>
+              )}
+              <div className="w-24">
+                <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-border)" }}>
+                  <div className="h-full rounded-full" style={{ width: "67%", background: "linear-gradient(90deg, #F59E0B, #00FF88)" }} />
+                </div>
+                <p className="text-text-secondary text-[10px] text-center mt-1 font-mono">67% — 209 km</p>
               </div>
-              <p className="text-text-secondary text-[10px] text-center mt-1 font-mono">67% — 209 km</p>
             </div>
           </div>
 
